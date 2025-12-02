@@ -1,46 +1,43 @@
-# syntax=docker/dockerfile:1.6
+# ========= Builder =========
+FROM golang:1.25-bookworm AS builder
 
-########################
-# Build stage
-########################
-FROM golang:1.22-bookworm AS builder
+WORKDIR /app
 
-# Use GOPATH mode because the repo has no go.mod/go.sum
-ENV GO111MODULE=off
-
-# Place code at its canonical GOPATH path so imports work
-WORKDIR /go/src/github.com/google/simhospital
-
-# Copy the entire repo into place
+# Copy the repo into the container
 COPY . .
 
-# Build the simulator binary for the current architecture
-# (no cross-compilation here – let Docker pick the arch)
-RUN CGO_ENABLED=0 go build -o /out/health/simulator ./cmd/simulator
+# If there is no go.mod (original repo), create one and tidy deps only inside the image.
+RUN if [ ! -f go.mod ]; then \
+      go mod init github.com/google/simhospital && \
+      go mod tidy; \
+    fi
 
-########################
-# Runtime stage
-########################
+# Build the simulator binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -o /app/simhospital ./cmd/simulator
+
+# ========= Runtime =========
 FROM debian:bookworm-slim
 
-# Minimal runtime deps + non-root user
 RUN useradd -u 10001 -r -s /usr/sbin/nologin simhospital \
  && apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates \
+ && apt-get install -y --no-install-recommends ca-certificates curl \
  && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /
+WORKDIR /app
 
-# Copy the built binary to /health/simulator (matches original images)
-COPY --from=builder /out/health /health
-
-# Copy configs and web assets so the dashboard + default pathways work
-COPY --from=builder /go/src/github.com/google/simhospital/configs /configs
-COPY --from=builder /go/src/github.com/google/simhospital/web     /web
+# Copy binary and configs
+COPY --from=builder /app/simhospital /usr/local/bin/simhospital
+COPY configs ./configs
+COPY web ./web
 
 USER simhospital
 
-EXPOSE 8000
+# Dashboard + metrics ports
+EXPOSE 8000 9095
 
-# By default this starts the simulator with its built-in config & dashboard
-ENTRYPOINT ["/health/simulator"]
+# Run the actual simulator engine by default
+ENTRYPOINT ["/usr/local/bin/simhospital", "health/simulator"]
+
+# Default: start dashboard + metrics
+CMD ["-dashboard_address=:8000", "-dashboard_uri=simulated-hospital", "-metrics_listen_address=:9095"]
