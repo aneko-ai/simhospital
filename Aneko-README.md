@@ -1,4 +1,30 @@
+## Web Access
+- [Dashboard - http://localhost:8000/simulated-hospital/](http://localhost:8000/simulated-hospital/)
+  - [Health - http://localhost:8000/simulated-hospital/health](http://localhost:8000/simulated-hospital/health)
+  - [Debug - http://localhost:8000/simulated-hospital/debug](http://localhost:8000/simulated-hospital/debug)
+- [Static Assets - http://localhost:8000/simulated-hospital/static](http://localhost:8000/simulated-hospital/static)
+- [Metrics (Prometheus) - http://localhost:9095/metrics](http://localhost:9095/metrics)
 
+## Run
+```
+docker run --rm -it \
+  -p 8000:8000 \
+  -p 9095:9095 \
+  frederickwong/simhospital:latest
+```
+
+## Build
+Build using the command:
+```
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t frederickwong/simhospital:latest \
+  -t frederickwong/simhospital:v0.1.0 \
+  --push \
+  .
+```
+
+## Help
 ```
 $ simhospital -h
 Usage of simhospital:
