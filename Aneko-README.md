@@ -14,7 +14,8 @@ docker run --rm -it \
 ```
 
 ## Build
-Build using the command:
+Build using the command (make sure: `docker login`):
+
 ```
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
