@@ -5,16 +5,15 @@
 ########################
 FROM golang:1.22-bookworm AS builder
 
-WORKDIR /src
+# Use GOPATH mode because the repo has no go.mod/go.sum
+ENV GO111MODULE=off
 
-# Use the module files first for better caching
-COPY go.mod go.sum ./
-RUN go mod download
+# Place code at its canonical GOPATH path so imports work
+WORKDIR /go/src/github.com/google/simhospital
 
-# Now bring in the rest of the source
+# Copy the entire repo
 COPY . .
 
-# Let buildx inject target OS/arch; sensible defaults for plain docker build
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64
 
@@ -40,8 +39,8 @@ WORKDIR /
 COPY --from=builder /out/health /health
 
 # Copy configs and web assets so the dashboard + default pathways work
-COPY --from=builder /src/configs /configs
-COPY --from=builder /src/web     /web
+COPY --from=builder /go/src/github.com/google/simhospital/configs /configs
+COPY --from=builder /go/src/github.com/google/simhospital/web     /web
 
 USER simhospital
 
