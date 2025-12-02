@@ -11,16 +11,12 @@ ENV GO111MODULE=off
 # Place code at its canonical GOPATH path so imports work
 WORKDIR /go/src/github.com/google/simhospital
 
-# Copy the entire repo
+# Copy the entire repo into place
 COPY . .
 
-ARG TARGETOS=linux
-ARG TARGETARCH=amd64
-
-# Build the simulator binary
-# This corresponds to the cmd/simulator command documented for SimHospital.
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
-    go build -o /out/health/simulator ./cmd/simulator
+# Build the simulator binary for the current architecture
+# (no cross-compilation here – let Docker pick the arch)
+RUN CGO_ENABLED=0 go build -o /out/health/simulator ./cmd/simulator
 
 ########################
 # Runtime stage
